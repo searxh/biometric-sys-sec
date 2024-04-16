@@ -8,16 +8,16 @@ function App() {
 	const [profile1Count, setProfile1Count] = useState<number>(0);
 	const [profile2Count, setProfile2Count] = useState<number>(0);
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	const [diagraphList, setDiagraphList] = useState<Array<string>>([]);
+	const [digraphList, setDigraphList] = useState<Array<string>>([]);
 	const pressedTime = useRef<{ [key: string]: number }>({});
-	const diagraphInfo = useRef<{
+	const digraphInfo = useRef<{
 		[key: string]: { total_time: number; items: number };
 	}>({});
-	const startDiagraphInfo = useRef<{ timestamp: number; key: string }>();
+	const startDigraphInfo = useRef<{ timestamp: number; key: string }>();
 	const typingProfiles = useRef<
 		{
 			name: string;
-			diagraphInfo: {
+			digraphInfo: {
 				[key: string]: { total_time: number; items: number };
 			};
 			totalTime: number; //
@@ -26,30 +26,30 @@ function App() {
 
 	const handleOnKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
 		pressedTime.current[e.key] = e.timeStamp;
-		if (startDiagraphInfo.current === undefined) {
+		if (startDigraphInfo.current === undefined) {
 			setIsRecording(true);
 			console.log("digraph start");
 		}
-		if (startDiagraphInfo.current !== undefined) {
+		if (startDigraphInfo.current !== undefined) {
 			// console.log(
 			// 	"startdigraph calculation for pair",
-			// 	`${startDiagraphInfo.current.key}${e.key}`
+			// 	`${startDigraphInfo.current.key}${e.key}`
 			// );
-			const timeDiff = e.timeStamp - startDiagraphInfo.current.timestamp;
-			const pairKey = `[${startDiagraphInfo.current.key}${e.key}]`;
-			if (diagraphInfo.current[pairKey] !== undefined) {
-				diagraphInfo.current[pairKey].total_time += timeDiff;
-				diagraphInfo.current[pairKey].items += 1;
+			const timeDiff = e.timeStamp - startDigraphInfo.current.timestamp;
+			const pairKey = `[${startDigraphInfo.current.key}${e.key}]`;
+			if (digraphInfo.current[pairKey] !== undefined) {
+				digraphInfo.current[pairKey].total_time += timeDiff;
+				digraphInfo.current[pairKey].items += 1;
 			} else {
 				const temp = {
 					total_time: timeDiff,
 					items: 1,
 				};
-				diagraphInfo.current[pairKey] = temp;
+				digraphInfo.current[pairKey] = temp;
 			}
 		}
-		// console.log("set start diagraph", e.key);
-		startDiagraphInfo.current = {
+		// console.log("set start digraph", e.key);
+		startDigraphInfo.current = {
 			timestamp: e.timeStamp,
 			key: e.key,
 		};
@@ -63,26 +63,26 @@ function App() {
 	};
 
 	const handleRender = () => {
-		if (!diagraphInfo.current) return;
+		if (!digraphInfo.current) return;
 		const newList: Array<string> = [];
-		Object.keys(diagraphInfo.current).forEach((pairKey) => {
-			if (diagraphInfo.current !== undefined) {
+		Object.keys(digraphInfo.current).forEach((pairKey) => {
+			if (digraphInfo.current !== undefined) {
 				newList.push(
 					`${pairKey}: ${Math.round(
-						diagraphInfo.current[pairKey].total_time /
-							diagraphInfo.current[pairKey].items
+						digraphInfo.current[pairKey].total_time /
+							digraphInfo.current[pairKey].items
 					)} ms`
 				);
 			}
 		});
-		setDiagraphList(newList);
+		setDigraphList(newList);
 	};
 
 	const handleSaveProfile = (name: string) => {
-		if (!diagraphInfo.current) return;
+		if (!digraphInfo.current) return;
 		const profile = {
 			name,
-			diagraphInfo: diagraphInfo.current,
+			digraphInfo: digraphInfo.current,
 			totalTime: calculateTotalTime(), // Calculate total time
 		};
 		if (name.includes("1")) {
@@ -92,7 +92,7 @@ function App() {
 		}
 		typingProfiles.current.push(profile);
 		handleRender();
-		resetDiagraph();
+		resetDigraph();
 	};
 
 	const calculateTotalTime = () => {
@@ -103,15 +103,15 @@ function App() {
 		return totalTime;
 	};
 
-	const resetDiagraph = () => {
-		// Reset diagraph info for next profile
-		console.log("diagraph info reset");
+	const resetDigraph = () => {
+		// Reset digraph info for next profile
+		console.log("digraph info reset");
 		setIsRecording(false);
-		diagraphInfo.current = {};
-		startDiagraphInfo.current = undefined;
+		digraphInfo.current = {};
+		startDigraphInfo.current = undefined;
 	};
 
-	const identifyUser = (newDiagraphInfo: {
+	const identifyUser = (newDigraphInfo: {
 		[key: string]: { total_time: number; items: number };
 	}) => {
 		if (!typingProfiles.current.length) return;
@@ -121,14 +121,13 @@ function App() {
 		// Calculate distances
 		const distances = typingProfiles.current.map((profile) => {
 			let distance = 0;
-			console.log(profile, newDiagraphInfo);
-			Object.keys(newDiagraphInfo).forEach((key) => {
-				const profileDiagraph = profile.diagraphInfo[key];
-				const newDiagraph = newDiagraphInfo[key];
-				if (profileDiagraph && newDiagraph) {
-					const avgTimeDiff =
-						profileDiagraph.total_time / profileDiagraph.items;
-					const newAvgTimeDiff = newDiagraph.total_time / newDiagraph.items;
+			console.log(profile, newDigraphInfo);
+			Object.keys(newDigraphInfo).forEach((key) => {
+				const profileDigraph = profile.digraphInfo[key];
+				const newDigraph = newDigraphInfo[key];
+				if (profileDigraph && newDigraph) {
+					const avgTimeDiff = profileDigraph.total_time / profileDigraph.items;
+					const newAvgTimeDiff = newDigraph.total_time / newDigraph.items;
 					//console.log(avgTimeDiff, newAvgTimeDiff);
 					distance += Math.pow(avgTimeDiff - newAvgTimeDiff, 2); // Squared difference
 				}
@@ -166,16 +165,17 @@ function App() {
 	};
 
 	const handleIdentify = () => {
-		if (!diagraphInfo.current) return;
-		const newDiagraphInfo = diagraphInfo.current;
-		const identifiedUser = identifyUser(newDiagraphInfo);
+		if (!digraphInfo.current) return;
+		handleRender();
+		const newDigraphInfo = digraphInfo.current;
+		const identifiedUser = identifyUser(newDigraphInfo);
 		alert(`Identified User: ${identifiedUser}!!!!!`);
-		diagraphInfo.current = {}; // Reset diagraph info for next identification
+		digraphInfo.current = {}; // Reset digraph info for next identification
 	};
 
 	return (
-		<div className="flex flex-col gap-2 bg-neutral-900 p-5 min-h-screen text-white">
-			<div className="flex flex-col gap-2 bg-neutral-800 text-white p-2 rounded-lg text-left border-[1px] border-neutral-700">
+		<div className="flex flex-col gap-3 bg-neutral-900 p-5 min-h-screen text-white">
+			<div className="flex flex-col gap-2 bg-neutral-800 text-white p-5 rounded-lg text-left border-[1px] border-neutral-700">
 				<div className="font-bold text-xl">GUIDE:</div>
 				<div className="text-neutral-300">
 					<div className="font-bold p-1">DATA GATHER PHASE</div>
@@ -194,7 +194,7 @@ function App() {
 					</div>
 				</div>
 			</div>
-			<div className="flex flex-col bg-neutral-800 p-2 rounded-lg border-[1px] border-neutral-700">
+			<div className="flex flex-col bg-neutral-800 p-5 rounded-lg border-[1px] border-neutral-700">
 				<div>
 					Profile 1:{" "}
 					<span className="text-orange-500">{profile1Count} Samples</span>
@@ -204,29 +204,30 @@ function App() {
 					<span className="text-yellow-500">{profile2Count} Samples</span>
 				</div>
 			</div>
-			<div className="flex text-white gap-2 p-2">
-				<span>DIAGRAPH RECORD STATE:</span>
-				{isRecording ? (
-					<span className="text-green-400">RECORDING</span>
-				) : (
-					<span className="text-pink-400">NOT RECORDING</span>
-				)}
-			</div>
-			<div className="flex flex-col gap-2 bg-neutral-800 p-2 rounded-lg border-[1px] border-neutral-700">
-				<div className="">TYPE HERE</div>
+
+			<div className="flex flex-col gap-2 bg-neutral-800 p-5 rounded-lg border-[1px] border-neutral-700">
+				<div className="flex text-white gap-2">
+					<span>DIGRAPH RECORD STATE:</span>
+					{isRecording ? (
+						<span className="text-green-400">RECORDING</span>
+					) : (
+						<span className="text-pink-400">NOT RECORDING</span>
+					)}
+				</div>
 				<div className="flex gap-1">
 					<input
 						ref={inputRef}
 						onKeyDown={(e) => handleOnKeyDown(e)}
 						onKeyUp={(e) => handleOnKeyUp(e)}
-						className="p-2 border-2 rounded-md flex-1 bg-neutral-700"
+						className="p-2 border-[1px] rounded-md flex-1 bg-neutral-900 border-neutral-700"
+						placeholder="Type a sentence.."
 					/>
 					<button
 						onClick={() => {
 							if (inputRef.current) inputRef.current.value = "";
-							resetDiagraph();
+							resetDigraph();
 						}}
-						className="bg-red-500 hover:bg-red-600 text-white w-10 h-10 rounded-lg m-auto"
+						className="bg-red-500 hover:bg-red-600 border-[1px] border-red-400 text-white w-10 h-10 rounded-lg m-auto"
 					>
 						X
 					</button>
@@ -260,15 +261,18 @@ function App() {
 					</button>
 				</div>
 			</div>
-			{diagraphList.length > 0 ? (
-				<div className="flex flex-col bg-neutral-800 border-[1px] border-neutral-700 gap-1 p-2 rounded-lg">
-					{diagraphList.map((item) => {
-						return (
-							<p key={Math.random()} className="text-white">
-								{item}
-							</p>
-						);
-					})}
+			{digraphList.length > 0 ? (
+				<div className="flex flex-col bg-neutral-800 border-[1px] border-neutral-700 gap-1 p-5 rounded-lg">
+					<div className="font-bold text-xl pb-2">DIGRAPH DATA:</div>
+					<div className="bg-neutral-900 p-2 rounded-lg border-[1px] border-neutral-700">
+						{digraphList.map((item) => {
+							return (
+								<p key={Math.random()} className="text-white">
+									{item}
+								</p>
+							);
+						})}
+					</div>
 				</div>
 			) : null}
 		</div>
