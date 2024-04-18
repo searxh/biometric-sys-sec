@@ -10,6 +10,9 @@ function App() {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const [digraphList, setDigraphList] = useState<Array<string>>([]);
 	const pressedTime = useRef<{ [key: string]: number }>({});
+	const keyPressedInfo = useRef<{
+		[key: string]: { total_time: number; items: number };
+	}>({});
 	const digraphInfo = useRef<{
 		[key: string]: { total_time: number; items: number };
 	}>({});
@@ -20,12 +23,14 @@ function App() {
 			digraphInfo: {
 				[key: string]: { total_time: number; items: number };
 			};
-			totalTime: number; //
+			totalTime: { total_time: number; items: number }; //
 		}[]
 	>([]); // Stores profiles
 
 	const handleOnKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-		pressedTime.current[e.key] = e.timeStamp;
+		if (pressedTime.current[e.key] === undefined) {
+			pressedTime.current[e.key] = e.timeStamp;
+		}
 		if (startDigraphInfo.current === undefined) {
 			setIsRecording(true);
 			console.log("digraph start");
@@ -56,10 +61,24 @@ function App() {
 	};
 
 	const handleOnKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
-		//console.log(e.key, e.timeStamp);
 		const currentTimestamp = e.timeStamp;
 		const previousTimestamp = pressedTime.current[e.key];
-		pressedTime.current[e.key] = currentTimestamp - previousTimestamp;
+		//console.log(e.key, currentTimestamp, previousTimestamp);
+		const timeDiff = currentTimestamp - previousTimestamp;
+		if (isNaN(timeDiff)) {
+			delete pressedTime.current[e.key];
+			return;
+		}
+		if (keyPressedInfo.current[e.key] !== undefined) {
+			keyPressedInfo.current[e.key].total_time += timeDiff;
+			keyPressedInfo.current[e.key].items += 1;
+		} else {
+			keyPressedInfo.current[e.key] = {
+				total_time: timeDiff,
+				items: 1,
+			};
+		}
+		delete pressedTime.current[e.key];
 	};
 
 	const handleRender = () => {
@@ -80,6 +99,7 @@ function App() {
 
 	const handleSaveProfile = (name: string) => {
 		if (!digraphInfo.current) return;
+		if (inputRef.current) inputRef.current.value = "";
 		const profile = {
 			name,
 			digraphInfo: digraphInfo.current,
@@ -90,6 +110,7 @@ function App() {
 		} else if (name.includes("2")) {
 			setProfile2Count((prev) => prev + 1);
 		}
+		console.log(profile);
 		typingProfiles.current.push(profile);
 		handleRender();
 		resetDigraph();
@@ -97,10 +118,14 @@ function App() {
 
 	const calculateTotalTime = () => {
 		let totalTime = 0;
-		Object.values(pressedTime.current).forEach((time) => {
-			totalTime += time;
+		console.log(keyPressedInfo.current);
+		Object.values(keyPressedInfo.current).forEach((info) => {
+			totalTime += info.total_time;
 		});
-		return totalTime;
+		return {
+			total_time: totalTime,
+			items: Object.keys(keyPressedInfo.current).length,
+		};
 	};
 
 	const resetDigraph = () => {
@@ -108,6 +133,8 @@ function App() {
 		console.log("digraph info reset");
 		setIsRecording(false);
 		digraphInfo.current = {};
+		pressedTime.current = {};
+		keyPressedInfo.current = {};
 		startDigraphInfo.current = undefined;
 	};
 
@@ -116,23 +143,49 @@ function App() {
 	}) => {
 		if (!typingProfiles.current.length) return;
 
-		const K = 3; // K nearest neighbors
+		const K = 5; // K nearest neighbors
 
 		// Calculate distances
 		const distances = typingProfiles.current.map((profile) => {
 			let distance = 0;
+			let digraphMatchedCount = 0;
 			console.log(profile, newDigraphInfo);
 			Object.keys(newDigraphInfo).forEach((key) => {
 				const profileDigraph = profile.digraphInfo[key];
 				const newDigraph = newDigraphInfo[key];
 				if (profileDigraph && newDigraph) {
+					console.log(profileDigraph, newDigraph, digraphMatchedCount);
+					digraphMatchedCount++;
 					const avgTimeDiff = profileDigraph.total_time / profileDigraph.items;
 					const newAvgTimeDiff = newDigraph.total_time / newDigraph.items;
 					//console.log(avgTimeDiff, newAvgTimeDiff);
 					distance += Math.pow(avgTimeDiff - newAvgTimeDiff, 2); // Squared difference
 				}
 			});
-			return { name: profile.name, distance };
+			const matchedPercent = Math.round(
+				(digraphMatchedCount / Object.keys(newDigraphInfo).length) * 100
+			);
+			const newTotalTime = calculateTotalTime();
+			const oldTotalTime = profile.totalTime;
+			const averagedTotalTimeDistance = Math.pow(
+				newTotalTime.total_time / newTotalTime.items -
+					oldTotalTime.total_time / oldTotalTime.items,
+				2
+			);
+			console.log(averagedTotalTimeDistance);
+			const adjustedDistance =
+				(1 - matchedPercent / 100) * (distance + averagedTotalTimeDistance);
+			// console.log(
+			// 	`${profile.name} ${Math.round(
+			// 		(digraphMatchedCount / Object.keys(newDigraphInfo).length) * 100
+			// 	)}% of digraphs matched`
+			// );
+			return {
+				name: profile.name,
+				distance: adjustedDistance,
+				matched: matchedPercent,
+				totalTime: profile.totalTime,
+			};
 		});
 
 		// Sort by distance (closest first)
@@ -193,6 +246,12 @@ function App() {
 						2. Click "Identify User" when done to get identification result
 					</div>
 				</div>
+			</div>
+			<div className="flex text-purple-400 bg-neutral-800 p-5 rounded-lg border-[1px] border-neutral-700">
+				"The quick brown fox jumps over the lazy dog." <br />
+				"Pack my box with five dozen liquor jugs."
+				<br />
+				"How quickly daft jumping zebras vex."
 			</div>
 			<div className="flex flex-col bg-neutral-800 p-5 rounded-lg border-[1px] border-neutral-700">
 				<div>
